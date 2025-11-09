@@ -62,10 +62,10 @@ type Config struct {
 // Home renders the home page
 func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	sess, err := session.Get(r)
-	
+
 	var userID interface{}
 	var userEmail interface{}
-	
+
 	if err != nil {
 		log.Printf("Error getting session (will show as not authenticated): %v", err)
 		// Clear bad cookie
@@ -83,8 +83,13 @@ func (h *Handler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"authenticated": userID != nil,
-		"user":          userEmail,
+		"authenticated":     userID != nil,
+		"user":              sess.Values["user_name"],
+		"user_email":        userEmail,
+		"user_first_name":   sess.Values["user_first_name"],
+		"user_last_name":    sess.Values["user_last_name"],
+		"user_initials":     sess.Values["user_initials"],
+		"user_picture":      sess.Values["user_picture"],
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "home.html", data); err != nil {
@@ -99,7 +104,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request Host: %s", r.Host)
 	log.Printf("Request URL: %s", r.URL.String())
 	log.Printf("Cookies received: %v", r.Cookies())
-	
+
 	// Create a fresh session (don't use existing one to avoid cookie issues)
 	sess, err := session.Get(r)
 	if err != nil {
@@ -123,7 +128,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	// Clear any existing OAuth state from previous attempts
 	delete(sess.Values, "oauth_state")
 	delete(sess.Values, "code_verifier")
-	
+
 	// Generate state parameter for CSRF protection
 	state := generateRandomString(32)
 	sess.Values["oauth_state"] = state
@@ -195,7 +200,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request Host: %s", r.Host)
 	log.Printf("Request URL: %s", r.URL.String())
 	log.Printf("Cookies received: %v", r.Cookies())
-	
+
 	sess, err := session.Get(r)
 	if err != nil {
 		log.Printf("Error getting session in callback: %v", err)
@@ -206,7 +211,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Callback: Session ID: %v", sess.ID)
 	log.Printf("Callback: Session IsNew: %v", sess.IsNew)
 	log.Printf("Callback: All session values: %+v", sess.Values)
-	
+
 	// Check if user is already logged in (callback was already processed)
 	if sess.Values["user_id"] != nil {
 		log.Printf("Callback: User already logged in, redirecting to dashboard")
@@ -217,22 +222,22 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Verify state parameter
 	state := r.URL.Query().Get("state")
 	savedState, ok := sess.Values["oauth_state"].(string)
-	
+
 	// Debug logging
 	log.Printf("Callback: state from URL: %s", state)
 	log.Printf("Callback: state from session: %s, ok: %v", savedState, ok)
-	
+
 	if !ok {
 		log.Printf("Callback: State not found - Session values: %+v", sess.Values)
 		h.renderError(w, "State not found in session. Your session may have expired. Please try logging in again.")
 		return
 	}
-	
+
 	if state == "" {
 		h.renderError(w, "No state parameter received from OAuth provider")
 		return
 	}
-	
+
 	if state != savedState {
 		log.Printf("State mismatch - expected: %s, got: %s", savedState, state)
 		h.renderError(w, "Invalid state parameter (CSRF check failed). Please try logging in again.")
@@ -284,13 +289,52 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	if email, ok := userInfo["preferred_email"].(string); ok {
 		sess.Values["user_email"] = email
 	}
-	if firstName, ok := userInfo["first_name"].(string); ok {
-		sess.Values["user_name"] = firstName
+
+	// Get first and last name
+	var fullName string
+	firstName := ""
+	lastName := ""
+	if fn, ok := userInfo["given_name"].(string); ok && fn != "" {
+		firstName = fn
+		fullName = fn
+	} else if fn, ok := userInfo["first_name"].(string); ok && fn != "" {
+		firstName = fn
+		fullName = fn
 	}
+	if ln, ok := userInfo["family_name"].(string); ok && ln != "" {
+		lastName = ln
+		if fullName != "" {
+			fullName += " " + ln
+		} else {
+			fullName = ln
+		}
+	} else if ln, ok := userInfo["last_name"].(string); ok && ln != "" {
+		lastName = ln
+		if fullName != "" {
+			fullName += " " + ln
+		} else {
+			fullName = ln
+		}
+	}
+
+	sess.Values["user_name"] = fullName
+	sess.Values["user_first_name"] = firstName
+	sess.Values["user_last_name"] = lastName
+
+	// Compute initials for avatar
+	initials := ""
+	if firstName != "" && len(firstName) > 0 {
+		initials += string(firstName[0])
+	}
+	if lastName != "" && len(lastName) > 0 {
+		initials += string(lastName[0])
+	}
+	sess.Values["user_initials"] = initials
+
 	if picture, ok := userInfo["picture"].(string); ok {
 		sess.Values["user_picture"] = picture
 	}
-	
+
 	log.Printf("Callback: Stored user data in session: user_id=%v, email=%v", sess.Values["user_id"], sess.Values["user_email"])
 
 	// Clear OAuth state and code verifier
@@ -334,10 +378,13 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"user_id":      sess.Values["user_id"],
-		"user_name":    sess.Values["user_name"],
-		"user_email":   sess.Values["user_email"],
-		"user_picture": sess.Values["user_picture"],
+		"user_id":         sess.Values["user_id"],
+		"user_name":       sess.Values["user_name"],
+		"user_first_name": sess.Values["user_first_name"],
+		"user_last_name":  sess.Values["user_last_name"],
+		"user_initials":   sess.Values["user_initials"],
+		"user_email":      sess.Values["user_email"],
+		"user_picture":    sess.Values["user_picture"],
 	}
 
 	if err := h.templates.ExecuteTemplate(w, "dashboard.html", data); err != nil {

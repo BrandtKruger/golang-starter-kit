@@ -7,74 +7,64 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <nav>
-                <div class="logo">
-                    <h1>🚀 Kinde Golang</h1>
-                </div>
-                <div class="nav-links">
-                    {{ if .authenticated }}
-                        <a href="/dashboard" class="btn btn-secondary">Dashboard</a>
-                        <a href="/logout" class="btn btn-secondary">Logout</a>
-                    {{ else }}
-                        <a href="/login" class="btn btn-primary">Sign In</a>
-                        <a href="/register" class="btn btn-secondary">Sign Up</a>
-                    {{ end }}
-                </div>
-            </nav>
-        </header>
-
-        <main>
-            <div class="hero">
-                <h1>Welcome to Kinde Golang Starter Kit</h1>
-                <p class="subtitle">A modern authentication starter kit built with Go and Kinde</p>
-                
+    <header>
+        <nav class="nav container">
+            <h1 class="text-display-3">KindeAuth</h1>
+            <div>
                 {{ if .authenticated }}
-                    <div class="welcome-message">
-                        <h2>👋 Hello, {{ .user }}!</h2>
-                        <p>You're successfully authenticated.</p>
-                        <a href="/dashboard" class="btn btn-primary btn-large">Go to Dashboard</a>
+                    <div class="profile-blob">
+                        <div class="avatar">{{ .user_initials }}</div>
+                        <div>
+                            <p class="text-heading-2">{{ .user }}</p>
+                            <a class="text-subtle" href="/logout">Sign out</a>
+                        </div>
                     </div>
                 {{ else }}
-                    <div class="cta-buttons">
-                        <a href="/login" class="btn btn-primary btn-large">Get Started</a>
-                        <a href="/register" class="btn btn-secondary btn-large">Create Account</a>
-                    </div>
+                    <a href="/login" class="btn btn-ghost sign-in-btn">Sign in</a>
+                    <a href="/register" class="btn btn-dark">Sign up</a>
                 {{ end }}
             </div>
+        </nav>
+    </header>
 
-            <div class="features">
-                <h2>Features</h2>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">🔐</div>
-                        <h3>Secure Authentication</h3>
-                        <p>OAuth2 with PKCE for secure user authentication</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Fast & Lightweight</h3>
-                        <p>Built with Gin framework for high performance</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🎨</div>
-                        <h3>Modern UI</h3>
-                        <p>Clean and responsive design out of the box</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🔧</div>
-                        <h3>Easy to Customize</h3>
-                        <p>Well-structured code ready for your needs</p>
-                    </div>
-                </div>
+    <main>
+        {{ if not .authenticated }}
+        <div class="container">
+            <div class="card hero">
+                <p class="text-display-1 hero-title">
+                    Let's start authenticating <br /> with KindeAuth
+                </p>
+                <p class="text-body-1 hero-tagline">Configure your app</p>
+                <a href="https://kinde.com/docs/sdks/golang-sdk" target="_blank" rel="noreferrer" class="btn btn-light btn-big">
+                    Go to docs
+                </a>
             </div>
-        </main>
+        </div>
+        {{ else }}
+        <div class="container">
+            <div class="card start-hero">
+                <p class="text-body-2 start-hero-intro">Woohoo!</p>
+                <p class="text-display-2">
+                    Your authentication is all sorted.<br />
+                    Build the important stuff.
+                </p>
+            </div>
+            <section class="next-steps-section">
+                <h2 class="text-heading-1">Next steps for you</h2>
+            </section>
+        </div>
+        {{ end }}
+    </main>
 
-        <footer>
-            <p>Built with ❤️ using <a href="https://kinde.com" target="_blank">Kinde</a> and <a href="https://golang.org" target="_blank">Go</a></p>
-        </footer>
-    </div>
+    <footer class="footer">
+        <div class="container">
+            <strong class="text-heading-2">KindeAuth</strong>
+            <p class="footer-tagline text-body-3">
+                Visit our <a class="link" href="https://kinde.com/docs" target="_blank">help center</a>
+            </p>
+            <small class="text-subtle">© 2024 KindeAuth, Inc. All rights reserved</small>
+        </div>
+    </footer>
 </body>
 </html>
 
